@@ -1,184 +1,7 @@
 use consts::{BLOCK_LEN, K0, K1, K2, K3};
 use byte_tools::read_u32v_be;
-use simd::u32x4;
 
-/// Not an intrinsic, but gets the first element of a vector.
-#[inline]
-pub fn sha1_first(w0: u32x4) -> u32 {
-    w0.0
-}
-
-/// Not an intrinsic, but adds a word to the first element of a vector.
-#[inline]
-pub fn sha1_first_add(e: u32, w0: u32x4) -> u32x4 {
-    let u32x4(a, b, c, d) = w0;
-    u32x4(e.wrapping_add(a), b, c, d)
-}
-
-/// Emulates `llvm.x86.sha1msg1` intrinsic.
-fn sha1msg1(a: u32x4, b: u32x4) -> u32x4 {
-    let u32x4(_, _, w2, w3) = a;
-    let u32x4(w4, w5, _, _) = b;
-    a ^ u32x4(w2, w3, w4, w5)
-}
-
-/// Emulates `llvm.x86.sha1msg2` intrinsic.
-fn sha1msg2(a: u32x4, b: u32x4) -> u32x4 {
-    let u32x4(x0, x1, x2, x3) = a;
-    let u32x4(_, w13, w14, w15) = b;
-
-    let w16 = (x0 ^ w13).rotate_left(1);
-    let w17 = (x1 ^ w14).rotate_left(1);
-    let w18 = (x2 ^ w15).rotate_left(1);
-    let w19 = (x3 ^ w16).rotate_left(1);
-
-    u32x4(w16, w17, w18, w19)
-}
-
-/// Performs 4 rounds of the message schedule update.
 /*
-pub fn sha1_schedule_x4(v0: u32x4, v1: u32x4, v2: u32x4, v3: u32x4) -> u32x4 {
-    sha1msg2(sha1msg1(v0, v1) ^ v2, v3)
-}
-*/
-
-/// Emulates `llvm.x86.sha1nexte` intrinsic.
-#[inline]
-fn sha1_first_half(abcd: u32x4, msg: u32x4) -> u32x4 {
-    sha1_first_add(sha1_first(abcd).rotate_left(30), msg)
-}
-
-/// Emulates `llvm.x86.sha1rnds4` intrinsic.
-/// Performs 4 rounds of the message block digest.
-fn sha1_digest_round_x4(abcd: u32x4, work: u32x4, i: i8) -> u32x4 {
-    const K0V: u32x4 = u32x4(K0, K0, K0, K0);
-    const K1V: u32x4 = u32x4(K1, K1, K1, K1);
-    const K2V: u32x4 = u32x4(K2, K2, K2, K2);
-    const K3V: u32x4 = u32x4(K3, K3, K3, K3);
-
-    match i {
-        0 => sha1rnds4c(abcd, work + K0V),
-        1 => sha1rnds4p(abcd, work + K1V),
-        2 => sha1rnds4m(abcd, work + K2V),
-        3 => sha1rnds4p(abcd, work + K3V),
-        _ => panic!("unknown icosaround index"),
-    }
-}
-
-/// Not an intrinsic, but helps emulate `llvm.x86.sha1rnds4` intrinsic.
-fn sha1rnds4c(abcd: u32x4, msg: u32x4) -> u32x4 {
-    let u32x4(mut a, mut b, mut c, mut d) = abcd;
-    let u32x4(t, u, v, w) = msg;
-    let mut e = 0u32;
-
-    macro_rules! bool3ary_202 {
-        ($a:expr, $b:expr, $c:expr) => (($c ^ ($a & ($b ^ $c))))
-    } // Choose, MD5F, SHA1C
-
-    e = e.wrapping_add(a.rotate_left(5))
-        .wrapping_add(bool3ary_202!(b, c, d))
-        .wrapping_add(t);
-    b = b.rotate_left(30);
-
-    d = d.wrapping_add(e.rotate_left(5))
-        .wrapping_add(bool3ary_202!(a, b, c))
-        .wrapping_add(u);
-    a = a.rotate_left(30);
-
-    c = c.wrapping_add(d.rotate_left(5))
-        .wrapping_add(bool3ary_202!(e, a, b))
-        .wrapping_add(v);
-    e = e.rotate_left(30);
-
-    b = b.wrapping_add(c.rotate_left(5))
-        .wrapping_add(bool3ary_202!(d, e, a))
-        .wrapping_add(w);
-    d = d.rotate_left(30);
-
-    u32x4(b, c, d, e)
-}
-
-/// Not an intrinsic, but helps emulate `llvm.x86.sha1rnds4` intrinsic.
-fn sha1rnds4p(abcd: u32x4, msg: u32x4) -> u32x4 {
-    let u32x4(mut a, mut b, mut c, mut d) = abcd;
-    let u32x4(t, u, v, w) = msg;
-    let mut e = 0u32;
-
-    macro_rules! bool3ary_150 {
-        ($a:expr, $b:expr, $c:expr) => (($a ^ $b ^ $c))
-    } // Parity, XOR, MD5H, SHA1P
-
-    e = e.wrapping_add(a.rotate_left(5))
-        .wrapping_add(bool3ary_150!(b, c, d))
-        .wrapping_add(t);
-    b = b.rotate_left(30);
-
-    d = d.wrapping_add(e.rotate_left(5))
-        .wrapping_add(bool3ary_150!(a, b, c))
-        .wrapping_add(u);
-    a = a.rotate_left(30);
-
-    c = c.wrapping_add(d.rotate_left(5))
-        .wrapping_add(bool3ary_150!(e, a, b))
-        .wrapping_add(v);
-    e = e.rotate_left(30);
-
-    b = b.wrapping_add(c.rotate_left(5))
-        .wrapping_add(bool3ary_150!(d, e, a))
-        .wrapping_add(w);
-    d = d.rotate_left(30);
-
-    u32x4(b, c, d, e)
-}
-
-/// Not an intrinsic, but helps emulate `llvm.x86.sha1rnds4` intrinsic.
-fn sha1rnds4m(abcd: u32x4, msg: u32x4) -> u32x4 {
-    let u32x4(mut a, mut b, mut c, mut d) = abcd;
-    let u32x4(t, u, v, w) = msg;
-    let mut e = 0u32;
-
-    macro_rules! bool3ary_232 {
-        ($a:expr, $b:expr, $c:expr) => (($a & $b) ^ ($a & $c) ^ ($b & $c))
-    } // Majority, SHA1M
-
-    e = e.wrapping_add(a.rotate_left(5))
-        .wrapping_add(bool3ary_232!(b, c, d))
-        .wrapping_add(t);
-    b = b.rotate_left(30);
-
-    d = d.wrapping_add(e.rotate_left(5))
-        .wrapping_add(bool3ary_232!(a, b, c))
-        .wrapping_add(u);
-    a = a.rotate_left(30);
-
-    c = c.wrapping_add(d.rotate_left(5))
-        .wrapping_add(bool3ary_232!(e, a, b))
-        .wrapping_add(v);
-    e = e.rotate_left(30);
-
-    b = b.wrapping_add(c.rotate_left(5))
-        .wrapping_add(bool3ary_232!(d, e, a))
-        .wrapping_add(w);
-    d = d.rotate_left(30);
-
-    u32x4(b, c, d, e)
-}
-
-/// Process a block with the SHA-1 algorithm.
-fn sha1_digest_block_u32(state: &mut [u32; 5], block: &[u32; 16]) {
-
-    macro_rules! schedule {
-        ($v0:expr, $v1:expr, $v2:expr, $v3:expr) => (
-            sha1msg2(sha1msg1($v0, $v1) ^ $v2, $v3)
-        )
-    }
-
-    macro_rules! rounds4 {
-        ($h0:ident, $h1:ident, $wk:expr, $i:expr) => (
-            sha1_digest_round_x4($h0, sha1_first_half($h1, $wk), $i)
-        )
-    }
-
     // Rounds 0..20
     // TODO: replace with `u32x4::load`
     let mut h0 = u32x4(state[0], state[1], state[2], state[3]);
@@ -237,58 +60,113 @@ fn sha1_digest_block_u32(state: &mut [u32; 5], block: &[u32; 16]) {
     state[2] = state[2].wrapping_add(c);
     state[3] = state[3].wrapping_add(d);
     state[4] = state[4].wrapping_add(e);
-}
+*/
 
-/// Process a block with the SHA-1 algorithm. (See more...)
-///
-/// SHA-1 is a cryptographic hash function, and as such, it operates
-/// on an arbitrary number of bytes. This function operates on a fixed
-/// number of bytes. If you call this function with anything other than
-/// 64 bytes, then it will panic! This function takes two arguments:
-///
-/// * `state` is reference to an **array** of 5 words.
-/// * `block` is reference to a **slice** of 64 bytes.
-///
-/// If you want the function that performs a message digest on an arbitrary
-/// number of bytes, then see also the `Sha1` struct above.
-///
-/// # Implementation
-///
-/// First, some background. Both ARM and Intel are releasing documentation
-/// that they plan to include instruction set extensions for SHA1 and SHA256
-/// sometime in the near future. Second, LLVM won't lower these intrinsics yet,
-/// so these functions were written emulate these instructions. Finally,
-/// the block function implemented with these emulated intrinsics turned out
-/// to be quite fast! What follows is a discussion of this CPU-level view
-/// of the SHA-1 algorithm and how it relates to the mathematical definition.
-///
-/// The SHA instruction set extensions can be divided up into two categories:
-///
-/// * message work schedule update calculation ("schedule" v., "work" n.)
-/// * message block 80-round digest calculation ("digest" v., "block" n.)
-///
-/// The schedule-related functions can be used to easily perform 4 rounds
-/// of the message work schedule update calculation, as shown below:
-///
-/// ```ignore
-/// macro_rules! schedule_x4 {
-///     ($v0:expr, $v1:expr, $v2:expr, $v3:expr) => (
-///         sha1msg2(sha1msg1($v0, $v1) ^ $v2, $v3)
-///     )
-/// }
-///
-/// macro_rules! round_x4 {
-///     ($h0:ident, $h1:ident, $wk:expr, $i:expr) => (
-///         sha1rnds4($h0, sha1_first_half($h1, $wk), $i)
-///     )
-/// }
-/// ```
-///
-/// and also shown above is how the digest-related functions can be used to
-/// perform 4 rounds of the message block digest calculation.
-///
-pub fn compress(state: &mut [u32; 5], block: &[u8; 64]) {
-    let mut block_u32 = [0u32; BLOCK_LEN];
-    read_u32v_be(&mut block_u32[..], block);
-    sha1_digest_block_u32(state, &block_u32);
+/*
+    //cycle 12-15 -> 64-67
+
+        sha1nexte   xmm2,  xmm10
+        movdqa      xmm9,  xmm1
+        sah1msg2   xmm11, xmm10
+        sha1rnds4   xmm1,  xmm2, 0
+        sah1msg1   xmm13, xmm10
+        pxor        xmm12, xmm10
+
+*/
+
+const shuffle_mask: u32x4 = u32x4(0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f);
+#[repr(simd)]
+#[derive(Copy, Clone, Debug)]
+pub struct u32x4(pub u32, pub u32, pub u32, pub u32);
+
+
+
+pub fn compress(abcd: &mut u32x4, e: &mut u32x4, block: &[u8; 64]) {
+
+    unsafe {
+        asm!(concat!("
+            movdqa      xmm14, xmm1
+            movdqa      xmm15, xmm2
+            ",
+            // Rounds 0-3
+            "
+            movdqu      xmm10, [rax + 0*16]
+            pshufb      xmm10, xmm3
+
+            paddd       xmm2,  xmm10
+            movdqa      xmm9,  xmm1
+            sha1rnds4   xmm1,  xmm2, 0
+            ",
+            // Rounds 4-7
+            "
+            movdqu      xmm11, [rax + 1*16]
+            pshufb      xmm11, xmm3
+            sha1nexte   xmm9,  xmm11
+            movdqa      xmm2,  xmm1
+            sha1rnds4   xmm1,  xmm9, 0
+
+            sha1msg1   xmm10, xmm11
+            ",
+            // Rounds 8-11
+            "
+            movdqu      xmm12, [rax + 2*16]
+            pshufb      xmm12, xmm3
+            sha1nexte   xmm2,  xmm12
+            movdqa      xmm9,  xmm1
+            sha1rnds4   xmm1,  xmm2, 0
+
+            sha1msg1   xmm11, xmm12
+            pxor        xmm10, xmm12
+            ",
+            // Rounds 12-15
+            "
+            movdqu      xmm13, [rax + 3*16]
+            pshufb      xmm13, xmm3
+            sha1nexte   xmm9,  xmm13
+            movdqa      xmm2,  xmm1
+            sha1msg2   xmm10, xmm13
+            sha1rnds4   xmm1,  xmm9, 0
+            sha1msg1   xmm12, xmm13
+            pxor        xmm11, xmm13
+            ",
+
+
+        //cycle 12-15 -> 64-67
+
+
+        // end cycle
+
+            // Rounds 68-71
+            "
+            sha1nexte   xmm9,  xmm11
+            movdqa      xmm2,  xmm1
+            sha1msg2   xmm12, xmm11
+            sha1rnds4   xmm1,  xmm9, 3
+            pxor        xmm13, xmm11
+            ",
+            // Rounds 72-75
+            "
+            sha1nexte   xmm2,  xmm12
+            movdqa      xmm9,  xmm1
+            sha1msg2   xmm13, xmm12
+            sha1rnds4   xmm1,  xmm2, 3
+            ",
+            // Rounds 76-79
+            "
+            sha1nexte   xmm9,  xmm13
+            movdqa      xmm2,  xmm1
+            sha1rnds4   xmm1,  xmm9, 3
+            ",
+            // Write result
+            "
+            sha1nexte   xmm2,  xmm15
+            paddd       xmm1,  xmm14
+            ")
+            : "={xmm1}"(*abcd), "={xmm2}"(*e)
+            : "{rax}"(block.as_ptr()), "{xmm1}"(*abcd), "{xmm2}"(*e),
+                "{xmm3}"(shuffle_mask)
+            : "xmm9", "xmm10", "xmm11", "xmm12", "xmm13", "xmm14", "xmm15"
+            : "intel", "alignstack"
+        )
+    }
 }
