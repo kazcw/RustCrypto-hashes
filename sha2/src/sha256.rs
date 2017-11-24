@@ -89,7 +89,7 @@ impl digest::FixedOutput for Sha256 {
         self.engine.finish();
         let mut out = GenericArray::default();
         write_u32v_be(out.as_mut_slice(), &self.engine.state.h);
-
+        *self = Default::default();
         out
     }
 }
