@@ -92,11 +92,12 @@ impl digest::Input for Sha512 {
 impl digest::FixedOutput for Sha512 {
     type OutputSize = U64;
 
-    fn fixed_result(mut self) -> GenericArray<u8, Self::OutputSize> {
+    fn fixed_result(&mut self) -> GenericArray<u8, Self::OutputSize> {
         self.engine.finish();
 
         let mut out = GenericArray::default();
         write_u64v_be(out.as_mut_slice(), &self.engine.state.h[..]);
+        *self = Default::default();
         out
     }
 }
@@ -125,11 +126,12 @@ impl digest::Input for Sha384 {
 impl digest::FixedOutput for Sha384 {
     type OutputSize = U48;
 
-    fn fixed_result(mut self) -> GenericArray<u8, Self::OutputSize> {
+    fn fixed_result(&mut self) -> GenericArray<u8, Self::OutputSize> {
         self.engine.finish();
 
         let mut out = GenericArray::default();
         write_u64v_be(out.as_mut_slice(), &self.engine.state.h[..6]);
+        *self = Default::default();
         out
     }
 }
@@ -160,11 +162,12 @@ impl digest::Input for Sha512Trunc256 {
 impl digest::FixedOutput for Sha512Trunc256 {
     type OutputSize = U32;
 
-    fn fixed_result(mut self) -> GenericArray<u8, Self::OutputSize> {
+    fn fixed_result(&mut self) -> GenericArray<u8, Self::OutputSize> {
         self.engine.finish();
 
         let mut out = GenericArray::default();
         write_u64v_be(out.as_mut_slice(), &self.engine.state.h[..4]);
+        *self = Default::default();
         out
     }
 }
@@ -193,17 +196,19 @@ impl digest::Input for Sha512Trunc224 {
 impl digest::FixedOutput for Sha512Trunc224 {
     type OutputSize = U28;
 
-    fn fixed_result(mut self) -> GenericArray<u8, Self::OutputSize> {
+    fn fixed_result(&mut self) -> GenericArray<u8, Self::OutputSize> {
         self.engine.finish();
 
         let mut out = GenericArray::default();
         write_u64v_be(&mut out[..24], &self.engine.state.h[..3]);
         write_u32_be(&mut out[24..28], (self.engine.state.h[3] >> 32) as u32);
+        *self = Default::default();
         out
     }
 }
-
+/*
 impl_opaque_debug!(Sha384);
 impl_opaque_debug!(Sha512);
 impl_opaque_debug!(Sha512Trunc224);
 impl_opaque_debug!(Sha512Trunc256);
+*/

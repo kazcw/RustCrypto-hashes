@@ -65,7 +65,6 @@
 
 #![no_std]
 extern crate byte_tools;
-#[macro_use]
 extern crate digest;
 extern crate block_buffer;
 extern crate fake_simd as simd;

@@ -85,10 +85,11 @@ impl digest::Input for Sha256 {
 impl digest::FixedOutput for Sha256 {
     type OutputSize = U32;
 
-    fn fixed_result(mut self) -> GenericArray<u8, Self::OutputSize> {
+    fn fixed_result(&mut self) -> GenericArray<u8, Self::OutputSize> {
         self.engine.finish();
         let mut out = GenericArray::default();
         write_u32v_be(out.as_mut_slice(), &self.engine.state.h);
+
         out
     }
 }
@@ -115,13 +116,15 @@ impl digest::Input for Sha224 {
 impl digest::FixedOutput for Sha224 {
     type OutputSize = U28;
 
-    fn fixed_result(mut self) -> GenericArray<u8, Self::OutputSize> {
+    fn fixed_result(&mut self) -> GenericArray<u8, Self::OutputSize> {
         self.engine.finish();
         let mut out = GenericArray::default();
         write_u32v_be(out.as_mut_slice(), &self.engine.state.h[..7]);
+        *self = Default::default();
         out
     }
 }
 
-impl_opaque_debug!(Sha224);
+/*impl_opaque_debug!(Sha224);
 impl_opaque_debug!(Sha256);
+*/
