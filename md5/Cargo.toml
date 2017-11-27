@@ -13,15 +13,18 @@ categories = ["cryptography", "no-std"]
 name = "md5"
 
 [dependencies]
-digest = "0.8"
+digest = { version = "0.8", default-features = false }
 byte-tools = "0.2"
 block-buffer = "0.3"
 md5-asm = { version = "0.4", optional=true}
+opaque-debug = "0.2"
 
 [dev-dependencies]
 digest = { version = "0.8", features = ["dev"] }
 
 [features]
+default = ["std"]
+std = ["digest/std"]
 asm = ["md5-asm"]
 
 [badges]

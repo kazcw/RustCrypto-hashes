@@ -2,12 +2,13 @@
 //!
 //! [1]: https://en.wikipedia.org/wiki/MD5
 
-#![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
 extern crate byte_tools;
 extern crate block_buffer;
+#[macro_use] extern crate opaque_debug;
+#[macro_use] extern crate digest;
 #[cfg(feature = "asm")]
 extern crate md5_asm as utils;
-extern crate digest;
 
 #[cfg(not(feature = "asm"))]
 mod utils;
@@ -18,6 +19,7 @@ use byte_tools::write_u32v_le;
 use block_buffer::BlockBuffer512;
 
 pub use digest::Digest;
+use digest::{Input, BlockInput, FixedOutput};
 use digest::generic_array::GenericArray;
 use digest::generic_array::typenum::{U16, U64};
 
@@ -64,18 +66,18 @@ impl Md5 {
     }
 }
 
-impl digest::BlockInput for Md5 {
+impl BlockInput for Md5 {
     type BlockSize = U64;
 }
 
-impl digest::Input for Md5 {
+impl Input for Md5 {
     #[inline]
     fn process(&mut self, input: &[u8]) {
         self.consume(input);
     }
 }
 
-impl digest::FixedOutput for Md5 {
+impl FixedOutput for Md5 {
     type OutputSize = U16;
 
     #[inline]
@@ -87,4 +89,5 @@ impl digest::FixedOutput for Md5 {
     }
 }
 
-//impl_opaque_debug!(Md5);
+impl_opaque_debug!(Md5);
+impl_write!(Md5);
