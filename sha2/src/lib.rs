@@ -25,7 +25,7 @@
 //! use sha2::{Sha256, Digest};
 //!
 //! // create a Sha256 object
-//! let mut hasher = Sha256::default();
+//! let mut hasher = Sha256::new();
 //!
 //! // write input message
 //! hasher.input(b"hello world");
@@ -45,7 +45,7 @@
 //! use sha2::{Sha512, Digest};
 //!
 //! // create a Sha512 object
-//! let mut hasher = Sha512::default();
+//! let mut hasher = Sha512::new();
 //!
 //! // write input message
 //! hasher.input(b"hello world");
@@ -63,11 +63,12 @@
 //!                         0xc5, 0x54, 0x2e, 0x93, 0xae, 0x9c, 0xd7, 0x6f][..]);
 //! ```
 
-#![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
 extern crate byte_tools;
-extern crate digest;
 extern crate block_buffer;
 extern crate fake_simd as simd;
+#[macro_use] extern crate opaque_debug;
+#[macro_use] extern crate digest;
 #[cfg(feature = "asm")]
 extern crate sha2_asm;
 

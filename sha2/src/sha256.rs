@@ -1,4 +1,4 @@
-use digest;
+use digest::{Input, BlockInput, FixedOutput};
 use digest::generic_array::GenericArray;
 use digest::generic_array::typenum::{U28, U32, U64};
 use block_buffer::BlockBuffer512;
@@ -74,15 +74,15 @@ impl Default for Sha256 {
     fn default() -> Self { Sha256 { engine: Engine256::new(&H256) } }
 }
 
-impl digest::BlockInput for Sha256 {
+impl BlockInput for Sha256 {
     type BlockSize = BlockSize;
 }
 
-impl digest::Input for Sha256 {
+impl Input for Sha256 {
     fn process(&mut self, msg: &[u8]) { self.engine.input(msg); }
 }
 
-impl digest::FixedOutput for Sha256 {
+impl FixedOutput for Sha256 {
     type OutputSize = U32;
 
     fn fixed_result(&mut self) -> GenericArray<u8, Self::OutputSize> {
@@ -105,15 +105,15 @@ impl Default for Sha224 {
     fn default() -> Self { Sha224 { engine: Engine256::new(&H224) } }
 }
 
-impl digest::BlockInput for Sha224 {
+impl BlockInput for Sha224 {
     type BlockSize = BlockSize;
 }
 
-impl digest::Input for Sha224 {
+impl Input for Sha224 {
     fn process(&mut self, msg: &[u8]) { self.engine.input(msg); }
 }
 
-impl digest::FixedOutput for Sha224 {
+impl FixedOutput for Sha224 {
     type OutputSize = U28;
 
     fn fixed_result(&mut self) -> GenericArray<u8, Self::OutputSize> {
@@ -125,6 +125,8 @@ impl digest::FixedOutput for Sha224 {
     }
 }
 
-/*impl_opaque_debug!(Sha224);
+impl_opaque_debug!(Sha224);
 impl_opaque_debug!(Sha256);
-*/
+
+impl_write!(Sha224);
+impl_write!(Sha256);
