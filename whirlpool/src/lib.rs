@@ -21,10 +21,9 @@
 //! let result = hasher.result();
 //! ```
 #![cfg_attr(feature = "cargo-clippy", allow(identity_op, double_parens))]
-
-#![no_std]
-#[macro_use]
-extern crate digest;
+#![cfg_attr(not(feature = "std"), no_std)]
+#[macro_use] extern crate opaque_debug;
+#[macro_use] extern crate digest;
 extern crate block_buffer;
 #[cfg(not(feature = "asm"))]
 extern crate byte_tools;
@@ -36,6 +35,7 @@ mod utils;
 use utils::compress;
 
 pub use digest::Digest;
+use digest::{Input, BlockInput, FixedOutput};
 #[cfg(not(feature = "asm"))]
 use byte_tools::{write_u64v_be, zero};
 use block_buffer::{BlockBuffer512, ZeroPadding};
@@ -109,11 +109,11 @@ impl Whirlpool {
     }
 }
 
-impl digest::BlockInput for Whirlpool {
+impl BlockInput for Whirlpool {
     type BlockSize = BlockSize;
 }
 
-impl digest::Input for Whirlpool {
+impl Input for Whirlpool {
     fn process(&mut self, input: &[u8]) {
         self.update_len(input.len() as u64);
         let hash = &mut self.hash;
@@ -121,23 +121,27 @@ impl digest::Input for Whirlpool {
     }
 }
 
-impl digest::FixedOutput for Whirlpool {
+impl FixedOutput for Whirlpool {
     type OutputSize = U64;
 
     #[cfg(not(feature = "asm"))]
-    fn fixed_result(mut self) -> GenericArray<u8, Self::OutputSize> {
+    fn fixed_result(&mut self) -> GenericArray<u8, Self::OutputSize> {
         self.finalize();
 
         let mut out = GenericArray::default();
         write_u64v_be(&mut out, &self.hash[..]);
+        *self = Default::default();
         out
     }
 
     #[cfg(feature = "asm")]
-    fn fixed_result(mut self) -> GenericArray<u8, Self::OutputSize> {
+    fn fixed_result(&mut self) -> GenericArray<u8, Self::OutputSize> {
         self.finalize();
-        self.hash
+        let res = self.hash.clone();
+        *self = Default::default();
+        res
     }
 }
 
 impl_opaque_debug!(Whirlpool);
+impl_write!(Whirlpool);

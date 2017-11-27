@@ -10,15 +10,18 @@ keywords = ["crypto", "whirlpool", "hash", "digest"]
 categories = ["cryptography", "no-std"]
 
 [dependencies]
-digest = "0.7"
+digest = { version = "0.8", default-features = false }
 byte-tools = "0.2"
 block-buffer = "0.3"
-whirlpool-asm = {version="0.3", optional=true}
+opaque-debug = "0.2"
+whirlpool-asm = { version = "0.3", optional = true }
 
 [dev-dependencies]
-digest = { version = "^0.7.1", features = ["dev"] }
+digest = { version = "0.8", features = ["dev"] }
 
 [features]
+default = ["std"]
+std = ["digest/std"]
 asm = ["whirlpool-asm"]
 
 [badges]
