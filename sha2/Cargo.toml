@@ -10,7 +10,7 @@ keywords = ["crypto", "sha2", "hash", "digest"]
 categories = ["cryptography", "no-std"]
 
 [dependencies]
-digest = { version = "0.8", default-features = false }
+digest = "0.8"
 byte-tools = "0.2"
 block-buffer = "0.3"
 fake-simd = "0.1"
