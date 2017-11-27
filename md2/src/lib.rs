@@ -98,8 +98,9 @@ impl FixedOutput for Md2 {
 
     fn fixed_result(&mut self) -> GenericArray<u8, Self::OutputSize> {
         self.finalize();
+        let res = GenericArray::clone_from_slice(&self.state.x[0..16]);
         *self = Default::default();
-        GenericArray::clone_from_slice(&self.state.x[0..16])
+        res
     }
 }
 
