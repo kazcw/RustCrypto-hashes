@@ -29,13 +29,14 @@
 //!
 //! println!("{:x}", out);
 //! ```
-#![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
 extern crate byte_tools;
-#[macro_use]
-extern crate digest;
 extern crate block_buffer;
+#[macro_use] extern crate opaque_debug;
+#[macro_use] extern crate digest;
 
 pub use digest::Digest;
+use digest::{Input, BlockInput, FixedOutput, ExtendableOutput};
 use block_buffer::{
     BlockBuffer576, BlockBuffer832, BlockBuffer1152, BlockBuffer1088,
     BlockBuffer1344,

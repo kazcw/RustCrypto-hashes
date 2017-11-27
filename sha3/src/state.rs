@@ -1,6 +1,9 @@
 use keccak;
 use consts::PLEN;
 use byte_tools::{read_u64v_le, write_u64v_le};
+#[cfg(feature = "std")]
+use std::mem;
+#[cfg(not(feature = "std"))]
 use core::mem;
 
 #[derive(Clone, Default)]
