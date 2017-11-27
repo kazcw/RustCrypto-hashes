@@ -19,7 +19,7 @@
 //! use sha3::{Digest, Sha3_256};
 //!
 //! // create a SHA3-256 object
-//! let mut hasher = Sha3_256::default();
+//! let mut hasher = Sha3_256::new();
 //!
 //! // write input message
 //! hasher.input(b"abc");
