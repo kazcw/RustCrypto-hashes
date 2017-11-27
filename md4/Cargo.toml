@@ -10,13 +10,18 @@ keywords = ["crypto", "md4", "hash", "digest"]
 categories = ["cryptography", "no-std"]
 
 [dependencies]
-digest = "0.7"
+digest = { version = "0.8", default-features = false }
 byte-tools = "0.2"
 block-buffer = "0.3"
 fake-simd = "0.1"
+opaque-debug = "0.2"
 
 [dev-dependencies]
-digest = { version = "^0.7.1", features = ["dev"] }
+digest = { version = "0.8", features = ["dev"] }
+
+[features]
+default = ["std"]
+std = ["digest/std"]
 
 [badges]
 travis-ci = { repository = "RustCrypto/hashes" }
